@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Yobih — save what you see</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,560;9..144,680&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#10141A;
+    --ink-soft:#1B3A3A;
+    --paper:#F7F3EC;
+    --paper-dim:#EDE6D8;
+    --coral:#FF6B4A;
+    --gold:#E8A94C;
+    --line: rgba(247,243,236,0.14);
+    --radius: 14px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--ink);
+    color:var(--paper);
+    font-family:'Inter', -apple-system, sans-serif;
+    min-height:100vh;
+    position:relative;
+    overflow-x:hidden;
+  }
+  /* signature: a slow-drifting sunset horizon behind everything */
+  .horizon{
+    position:fixed;
+    inset:0;
+    z-index:0;
+    background:
+      radial-gradient(ellipse 60% 40% at 50% 105%, rgba(255,107,74,0.35), transparent 70%),
+      radial-gradient(ellipse 80% 50% at 20% 100%, rgba(232,169,76,0.18), transparent 70%),
+      radial-gradient(ellipse 80% 50% at 85% 100%, rgba(27,58,58,0.4), transparent 70%);
+    pointer-events:none;
+  }
+  .grain{
+    position:fixed; inset:0; z-index:1; pointer-events:none; opacity:0.035;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  .wrap{
+    position:relative; z-index:2;
+    max-width:720px;
+    margin:0 auto;
+    padding:64px 24px 96px;
+  }
+  header{
+    display:flex; align-items:center; justify-content:space-between;
+    margin-bottom:72px;
+  }
+  .logo{
+    font-family:'Fraunces', serif;
+    font-weight:680;
+    font-size:22px;
+    letter-spacing:0.01em;
+    display:flex; align-items:center; gap:10px;
+  }
+  .logo .dot{
+    width:9px;height:9px;border-radius:50%;
+    background:linear-gradient(135deg,var(--coral),var(--gold));
+    display:inline-block;
+  }
+  .eyebrow{
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px;
+    color:var(--gold);
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    opacity:0.85;
+  }
+  h1{
+    font-family:'Fraunces', serif;
+    font-weight:560;
+    font-size:clamp(38px, 7vw, 64px);
+    line-height:1.02;
+    letter-spacing:-0.01em;
+    margin:14px 0 18px;
+  }
+  h1 em{
+    font-style:italic;
+    font-weight:680;
+    background:linear-gradient(100deg, var(--coral), var(--gold));
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:transparent;
+  }
+  .sub{
+    font-size:16px;
+    line-height:1.6;
+    color:var(--paper);
+    opacity:0.72;
+    max-width:46ch;
+    margin-bottom:40px;
+  }
+  form{
+    display:flex;
+    gap:8px;
+    background:rgba(247,243,236,0.05);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:6px;
+  }
+  input[type="text"]{
+    flex:1;
+    background:transparent;
+    border:none;
+    outline:none;
+    color:var(--paper);
+    font-family:'JetBrains Mono', monospace;
+    font-size:14px;
+    padding:14px 16px;
+  }
+  input[type="text"]::placeholder{ color:rgba(247,243,236,0.38); }
+  button.go{
+    border:none;
+    border-radius:10px;
+    padding:0 22px;
+    font-family:'Inter', sans-serif;
+    font-weight:600;
+    font-size:14px;
+    color:var(--ink);
+    background:linear-gradient(100deg, var(--gold), var(--coral));
+    cursor:pointer;
+    transition:transform 0.15s ease, filter 0.15s ease;
+  }
+  button.go:hover{ filter:brightness(1.08); transform:translateY(-1px); }
+  button.go:active{ transform:translateY(0); }
+  button.go:disabled{ opacity:0.55; cursor:default; transform:none; }
+
+  .hint{
+    margin-top:12px;
+    font-size:12px;
+    color:var(--paper);
+    opacity:0.45;
+    font-family:'JetBrains Mono', monospace;
+  }
+
+  /* signature loading element: sunset arc filling like a horizon rising */
+  .arc-wrap{
+    display:none;
+    align-items:center;
+    gap:14px;
+    margin-top:28px;
+    font-family:'JetBrains Mono', monospace;
+    font-size:13px;
+    color:var(--paper);
+    opacity:0.8;
+  }
+  .arc-wrap.active{ display:flex; }
+  .arc{
+    width:34px; height:34px; border-radius:50%;
+    background: conic-gradient(from 0deg, var(--coral), var(--gold), transparent 0%);
+    animation: spin 0.9s linear infinite;
+  }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+
+  .result{
+    margin-top:40px;
+    display:none;
+  }
+  .result.active{ display:block; animation: rise 0.5s ease both; }
+  @keyframes rise{ from{ opacity:0; transform:translateY(10px);} to{opacity:1; transform:translateY(0);} }
+
+  .card{
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    overflow:hidden;
+    background:rgba(247,243,236,0.04);
+  }
+  .card media, .card video, .card img{
+    display:block; width:100%; max-height:520px; object-fit:contain; background:#000;
+  }
+  .card-body{
+    padding:18px 20px 20px;
+  }
+  .caption{
+    font-size:13.5px;
+    line-height:1.55;
+    color:var(--paper);
+    opacity:0.7;
+    margin:0 0 16px;
+    max-height:4.6em;
+    overflow:hidden;
+  }
+  a.download{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    text-decoration:none;
+    font-family:'Inter', sans-serif;
+    font-weight:600;
+    font-size:14px;
+    color:var(--ink);
+    background:linear-gradient(100deg, var(--gold), var(--coral));
+    padding:12px 20px;
+    border-radius:10px;
+  }
+
+  .error{
+    display:none;
+    margin-top:24px;
+    padding:16px 18px;
+    border-radius:12px;
+    border:1px solid rgba(255,107,74,0.4);
+    background:rgba(255,107,74,0.08);
+    font-size:13.5px;
+    line-height:1.5;
+  }
+  .error.active{ display:block; }
+
+  footer{
+    margin-top:96px;
+    padding-top:24px;
+    border-top:1px solid var(--line);
+    font-size:12px;
+    color:var(--paper);
+    opacity:0.4;
+    line-height:1.7;
+    font-family:'JetBrains Mono', monospace;
+  }
+
+  @media (max-width: 520px){
+    header{ margin-bottom:56px; }
+    form{ flex-direction:column; }
+    button.go{ padding:14px; }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .arc{ animation:none; }
+    .result.active{ animation:none; }
+  }
+</style>
+</head>
+<body>
+  <div class="horizon"></div>
+  <div class="grain"></div>
+
+  <div class="wrap">
+    <header>
+      <div class="logo"><span class="dot"></span>Yobih</div>
+      <div class="eyebrow">Posts · Reels · IGTV</div>
+    </header>
+
+    <div class="eyebrow">Instagram, kept</div>
+    <h1>Paste the link.<br><em>Take it with you.</em></h1>
+    <p class="sub">Drop a public Instagram post or reel link below. Yobih pulls the original photo or video so you can save it — no account, no app, no watermark.</p>
+
+    <form id="form">
+      <input type="text" id="url" placeholder="https://www.instagram.com/reel/…" autocomplete="off" spellcheck="false" />
+      <button class="go" type="submit" id="go">Fetch</button>
+    </form>
+    <div class="hint">Works with public posts, reels, and IGTV. Private accounts can't be reached — same as opening the link yourself.</div>
+
+    <div class="arc-wrap" id="loading"><span class="arc"></span> reading the post…</div>
+
+    <div class="error" id="error"></div>
+
+    <div class="result" id="result">
+      <div class="card">
+        <div id="mediaSlot"></div>
+        <div class="card-body">
+          <p class="caption" id="caption"></p>
+          <a class="download" id="downloadLink" href="#" download target="_blank" rel="noopener">
+            ↓ Download
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      Yobih only reads what a public post already shows anyone who opens the link.<br>
+      Please respect creators — don't repost their work as your own.
+    </footer>
+  </div>
+
+<script>
+  const form = document.getElementById('form');
+  const input = document.getElementById('url');
+  const goBtn = document.getElementById('go');
+  const loading = document.getElementById('loading');
+  const errorBox = document.getElementById('error');
+  const result = document.getElementById('result');
+  const mediaSlot = document.getElementById('mediaSlot');
+  const caption = document.getElementById('caption');
+  const downloadLink = document.getElementById('downloadLink');
+
+  function reset(){
+    errorBox.classList.remove('active');
+    result.classList.remove('active');
+    mediaSlot.innerHTML = '';
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const url = input.value.trim();
+    if (!url) return;
+
+    reset();
+    loading.classList.add('active');
+    goBtn.disabled = true;
+
+    try {
+      const res = await fetch('/api/resolve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      });
+      const data = await res.json();
+
+      if (!data.ok) {
+        errorBox.textContent = data.error || 'Something went wrong. Try another link.';
+        errorBox.classList.add('active');
+        return;
+      }
+
+      if (data.type === 'video') {
+        mediaSlot.innerHTML = `<video src="${data.mediaUrl}" controls playsinline poster="${data.thumbnail || ''}"></video>`;
+      } else {
+        mediaSlot.innerHTML = `<img src="${data.mediaUrl}" alt="Instagram media" />`;
+      }
+      caption.textContent = data.caption || data.title || '';
+      downloadLink.href = `/api/download?url=${encodeURIComponent(data.mediaUrl)}&type=${data.type}`;
+      result.classList.add('active');
+    } catch (err) {
+      errorBox.textContent = 'Couldn’t reach Yobih’s server. Check your connection and try again.';
+      errorBox.classList.add('active');
+    } finally {
+      loading.classList.remove('active');
+      goBtn.disabled = false;
+    }
+  });
+</script>
+</body>
+</html>
